@@ -1,0 +1,10 @@
+name: setup-gh
+description: Setup Syft Studio CLI on GitHub Actions runners
+inputs:
+  version:
+    description: Version of Syft Studio CLI to install
+    required: false
+    default: 1.0.0
+runs:
+  using: node16
+  main: dist/index.js
