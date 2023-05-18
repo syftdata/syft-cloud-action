@@ -73,11 +73,11 @@ async function setup() {
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
 
-    core.workingDirectory(workingDirectory);
-
     core.log(
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
+
+    await exec.exec(`cd ${workingDirectory}`);
     // Download the specific version of the tool, e.g. as a tarball/zipball
     const download = getDownloadObject(version);
     const pathToTarball = await tc.downloadTool(download.url);
