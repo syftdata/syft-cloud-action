@@ -11,10 +11,10 @@ inputs:
     description: Version of Syft Studio CLI to install
     required: false
     default: 1.0.0
-  test_spec_folder:
-    description: "Folder containing test specs"
+  working_directory:
+    description: "Working Directory"
     required: false
-    default: "syft/tests"
+    default: "."
 runs:
   using: node16
   main: dist/index.js

@@ -54,7 +54,7 @@ async function setup() {
   try {
     // Get version of tool to be installed
     const version = core.getInput("version");
-    const testSpecfolder = core.getInput("test_spec_folder");
+    const workingDirectory = core.getInput("working_directory");
     const instrumentationToken = core.getInput("instrumentation_token");
     const githubToken = core.getInput("github_token");
 
@@ -66,6 +66,8 @@ async function setup() {
 
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
+
+    core.workingDirectory(workingDirectory);
 
     core.log(
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
@@ -89,7 +91,7 @@ async function setup() {
     await exec.exec("node", [
       `${pathToCLI}/lib/index.js`,
       "instrument",
-      `--testSpecs ${testSpecfolder}`,
+      `--testSpecs ${workingDirectory}`,
     ]);
     //
   } catch (e) {
