@@ -1,10 +1,20 @@
-name: setup-gh
-description: Setup Syft Studio CLI on GitHub Actions runners
+name: syft-instrumentation
+description: Runs Syft Auto instrumentation tooling on your codebase.
 inputs:
+  instrumentation_token:
+    description: "Syft Auto Instrumentation token"
+    required: true
+  github_token:
+    description: "Github token to change source code"
+    required: true
   version:
     description: Version of Syft Studio CLI to install
     required: false
     default: 1.0.0
+  test_spec_folder:
+    description: "Folder containing test specs"
+    required: false
+    default: "syft/tests"
 runs:
   using: node16
   main: dist/index.js
