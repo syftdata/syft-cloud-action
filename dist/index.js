@@ -62,7 +62,7 @@ async function runInstrumentCommand(
       "--verbose",
     ],
     {
-      cwd: fullProjectDir,
+      cwd: pathToCLI,
     }
   );
 }
