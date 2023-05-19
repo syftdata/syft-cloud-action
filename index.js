@@ -6,14 +6,9 @@ const github = require("@actions/github");
 const io = require("@actions/io");
 
 function getDownloadObject(version) {
-  const filename = "syft-studio-cli";
-  const extension = "tgz";
-  const binPath = "bin";
-  //const url = `https://github.com/cli/cli/releases/download/v${version}/${filename}.${extension}`;
   const url = "https://storage.googleapis.com/syft_cdn/syftdata-cli-v1.tgz";
   return {
     url,
-    binPath,
   };
 }
 
@@ -92,9 +87,12 @@ async function setup() {
     const pathToTarball = await tc.downloadTool(download.url);
     const pathToUnzip = await tc.extractTar(pathToTarball);
 
-    const SYFT_FOLDER = "/home/runner/work/syft";
-    await io.cp(pathToUnzip, SYFT_FOLDER, { recursive: true, force: true });
-    const pathToCLI = path.join(SYFT_FOLDER, "dist-bundle");
+    const workspaceDirectory = process.env.GITHUB_WORKSPACE;
+    await io.cp(pathToUnzip, workspaceDirectory, {
+      recursive: true,
+      force: true,
+    });
+    const pathToCLI = path.join(workspaceDirectory, "dist-bundle");
     await exec.exec("ls", ["-R", `${pathToCLI}/lib`]);
 
     core.info("Installing puppeteer dependencies");
@@ -104,12 +102,15 @@ async function setup() {
     await exec.exec("npm", ["install", "--include-dev"], {
       cwd: pathToCLI,
     });
-    core.info("Running tests and instrumentor");
+
+    core.info(
+      `Running tests and instrumentor in ${workingDirectory} and workspace is: ${workspaceDirectory}`
+    );
     await exec.exec(
       "node",
       [`${pathToCLI}/lib/index.js`, "instrument", `--testSpecs syft/tests`],
       {
-        cwd: workingDirectory,
+        cwd: path.join(workspaceDirectory, workingDirectory),
       }
     );
   } catch (e) {
