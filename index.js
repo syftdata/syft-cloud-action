@@ -73,7 +73,7 @@ async function setup() {
 
     core.info(`Syft Instrumentation starting`);
 
-    core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
+    //core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable(
       "PUPPETEER_CACHE_DIR",
       path.join(workspaceDirectory, ".cache", "puppeteer")
