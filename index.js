@@ -114,9 +114,19 @@ async function setup() {
     core.info(
       `Running tests and instrumentor in ${workingDirectory} and workspace is: ${workspaceDirectory}`
     );
+    const projectDir = path.join(workspaceDirectory, workingDirectory);
     await exec.exec(
       "node",
-      [`${pathToCLI}/lib/index.js`, "instrument", `--testSpecs ./syft/tests`],
+      [
+        `${pathToCLI}/lib/index.js`,
+        "instrument",
+        "--srcDir",
+        projectDir,
+        "--input",
+        path.join(projectDir, "syft"),
+        "--testSpecs",
+        path.join(projectDir, "syft", "tests"),
+      ],
       {
         cwd: path.join(workspaceDirectory, workingDirectory),
       }
