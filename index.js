@@ -58,7 +58,7 @@ async function setup() {
     const instrumentationToken = core.getInput("instrumentation_token");
     const githubToken = core.getInput("github_token");
 
-    core.log(`Syft Instrumentation starting: version: ${version}`);
+    core.info(`Syft Instrumentation starting: version: ${version}`);
 
     const context = github.context;
     const octokit = github.getOctokit(githubToken);
@@ -67,7 +67,7 @@ async function setup() {
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
 
-    core.log(
+    core.info(
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
 
@@ -82,12 +82,12 @@ async function setup() {
       : tc.extractTar;
 
     const pathToCLI = await extract(pathToTarball);
-    core.log("Installing dependencies");
+    core.info("Installing dependencies");
     await exec.exec("npm install --include-dev");
     // Expose the tool by adding it to the PATH
     //core.addPath(path.join(pathToCLI, download.binPath));
     await setupPuppeteer();
-    core.log("Running tests and instrumentor");
+    core.info("Running tests and instrumentor");
     await exec.exec("node", [
       `${pathToCLI}/lib/index.js`,
       "instrument",
