@@ -31,9 +31,12 @@ async function setupPuppeteer() {
   await exec.exec(`sudo apt-key add -`, [], {
     input: stdout,
   });
-  fs.appendFileSync(
-    "/etc/apt/sources.list.d/google.list",
-    "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
+  // fs.appendFileSync(
+  //   "/etc/apt/sources.list.d/google.list",
+  //   "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
+  // );
+  await exec.exec(
+    `sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'`
   );
   await exec.exec(`sudo apt-get update`);
   await exec.exec(
@@ -86,6 +89,9 @@ async function setup() {
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
 
+    core.info("Installing puppeteer dependencies");
+    await setupPuppeteer();
+
     // Download the specific version of the tool, e.g. as a tarball/zipball
     core.info("Downloading code assistor brain");
     const download = getDownloadObject(version);
@@ -97,10 +103,6 @@ async function setup() {
     await exec.exec("npm", ["install", "--include-dev"], {
       cwd: pathToCLI,
     });
-
-    core.info("Installing puppeteer dependencies");
-    await setupPuppeteer();
-
     core.info("Running tests and instrumentor");
     await exec.exec(
       "node",
