@@ -68,7 +68,7 @@ async function setup() {
     core.info(`Syft Instrumentation starting: version: ${version}`);
 
     const octokit = github.getOctokit(githubToken);
-    const issueNumber = getIssueNumber(octokit);
+    const issueNumber = await getIssueNumber(octokit);
 
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
@@ -77,21 +77,20 @@ async function setup() {
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
 
+    core.info("Installing puppeteer dependencies");
+    await setupPuppeteer();
+
     // Download the specific version of the tool, e.g. as a tarball/zipball
+    core.info("Downloading code assistor brain");
     const download = getDownloadObject(version);
     const pathToTarball = await tc.downloadTool(download.url);
+    const pathToUnzip = await tc.extractTar(pathToTarball);
+    const pathToCLI = path.join(pathToUnzip, "dist-bundle");
 
-    // Extract the tarball/zipball onto host runner
-    const extract = download.url.endsWith(".zip")
-      ? tc.extractZip
-      : tc.extractTar;
-
-    const pathToCLI = await extract(pathToTarball);
     core.info("Installing dependencies");
     await exec.exec("npm", ["install", "--include-dev"], {
       cwd: pathToCLI,
     });
-    await setupPuppeteer();
     core.info("Running tests and instrumentor");
     await exec.exec(
       "node",
@@ -100,7 +99,6 @@ async function setup() {
         cwd: workingDirectory,
       }
     );
-    //
   } catch (e) {
     core.setFailed(e);
   }
