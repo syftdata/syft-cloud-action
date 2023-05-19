@@ -1,9 +1,9 @@
 const path = require("path");
-const fs = require("fs");
 const core = require("@actions/core");
 const tc = require("@actions/tool-cache");
 const exec = require("@actions/exec");
 const github = require("@actions/github");
+const io = require("@actions/io");
 
 function getDownloadObject(version) {
   const filename = "syft-studio-cli";
@@ -86,15 +86,19 @@ async function setup() {
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
 
-    core.info("Installing puppeteer dependencies");
-    await setupPuppeteer();
-
     // Download the specific version of the tool, e.g. as a tarball/zipball
     core.info("Downloading code assistor brain");
     const download = getDownloadObject(version);
     const pathToTarball = await tc.downloadTool(download.url);
     const pathToUnzip = await tc.extractTar(pathToTarball);
-    const pathToCLI = path.join(pathToUnzip, "dist-bundle");
+
+    const SYFT_FOLDER = "/home/runner/work/syft";
+    io.cp(pathToUnzip, SYFT_FOLDER, { recursive: true, force: true });
+    const pathToCLI = path.join(SYFT_FOLDER, "dist-bundle");
+    await exec.exec("ls", ["-R", pathToCLI]);
+
+    core.info("Installing puppeteer dependencies");
+    await setupPuppeteer();
 
     core.info("Installing dependencies");
     await exec.exec("npm", ["install", "--include-dev"], {

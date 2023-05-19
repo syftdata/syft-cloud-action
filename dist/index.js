@@ -5,11 +5,11 @@
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const path = __nccwpck_require__(1017);
-const fs = __nccwpck_require__(7147);
 const core = __nccwpck_require__(3476);
 const tc = __nccwpck_require__(4295);
 const exec = __nccwpck_require__(5493);
 const github = __nccwpck_require__(7427);
+const io = __nccwpck_require__(8549);
 
 function getDownloadObject(version) {
   const filename = "syft-studio-cli";
@@ -92,15 +92,19 @@ async function setup() {
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
 
-    core.info("Installing puppeteer dependencies");
-    await setupPuppeteer();
-
     // Download the specific version of the tool, e.g. as a tarball/zipball
     core.info("Downloading code assistor brain");
     const download = getDownloadObject(version);
     const pathToTarball = await tc.downloadTool(download.url);
     const pathToUnzip = await tc.extractTar(pathToTarball);
-    const pathToCLI = path.join(pathToUnzip, "dist-bundle");
+
+    const SYFT_FOLDER = "/home/runner/work/syft";
+    io.cp(pathToUnzip, SYFT_FOLDER, { recursive: true, force: true });
+    const pathToCLI = path.join(SYFT_FOLDER, "dist-bundle");
+    await exec.exec("ls", ["-R", pathToCLI]);
+
+    core.info("Installing puppeteer dependencies");
+    await setupPuppeteer();
 
     core.info("Installing dependencies");
     await exec.exec("npm", ["install", "--include-dev"], {
