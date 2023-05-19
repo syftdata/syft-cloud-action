@@ -77,7 +77,6 @@ async function setup() {
       `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
     );
 
-    await exec.exec(`cd ${workingDirectory}`);
     // Download the specific version of the tool, e.g. as a tarball/zipball
     const download = getDownloadObject(version);
     const pathToTarball = await tc.downloadTool(download.url);
@@ -97,7 +96,7 @@ async function setup() {
     await exec.exec("node", [
       `${pathToCLI}/lib/index.js`,
       "instrument",
-      `--testSpecs ${workingDirectory}`,
+      `--testSpecs ${workingDirectory}/syft/tests`,
     ]);
     //
   } catch (e) {
