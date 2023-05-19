@@ -4,6 +4,7 @@ const tc = require("@actions/tool-cache");
 const exec = require("@actions/exec");
 const github = require("@actions/github");
 const io = require("@actions/io");
+const utils = require("./utils");
 
 function getDownloadObject(version) {
   const url = "https://storage.googleapis.com/syft_cdn/syftdata-cli-v1.tgz";
@@ -12,125 +13,72 @@ function getDownloadObject(version) {
   };
 }
 
-async function setupPuppeteer() {
-  await exec.exec(`sudo apt-get update`);
-  await exec.exec(`sudo apt-get install -yq libgconf-2-4`);
-  await exec.exec(`sudo apt-get install -y wget xvfb --no-install-recommends`);
-  const { stdout } = await exec.getExecOutput(
-    `wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub`,
-    [],
-    {
-      silent: true,
-    }
-  );
-  await exec.exec(`sudo apt-key add -`, [], {
-    input: stdout,
+async function setupSyftCLI(workspaceDirectory) {
+  const version = core.getInput("version");
+  core.info(`Downloading the binary for version: ${version}`);
+  const download = getDownloadObject(version);
+  const pathToTarball = await tc.downloadTool(download.url);
+  const pathToUnzip = await tc.extractTar(pathToTarball);
+
+  const syftDir = path.join(workspaceDirectory, "../../syft");
+  await io.cp(pathToUnzip, syftDir, {
+    recursive: true,
+    force: true,
   });
-  await exec.exec("sudo tee -a /etc/apt/sources.list.d/google.list", [], {
-    input:
-      "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main",
+  const pathToCLI = path.join(syftDir, "dist-bundle");
+  core.info("Installing dependencies");
+  await exec.exec("npm", ["install", "--include-dev"], {
+    cwd: pathToCLI,
   });
-  await exec.exec(`sudo apt-get update`);
-  await exec.exec(
-    `sudo apt-get install -y google-chrome-stable --no-install-recommends`
-  );
-  await exec.exec(`sudo rm -rf /var/lib/apt/lists/*`);
+  return pathToCLI;
 }
 
-async function getIssueNumber(octokit) {
-  try {
-    const context = github.context;
-    const issue = context.payload.issue;
-    if (issue) {
-      return issue.number;
+async function runInstrumentCommand(
+  pathToCLI,
+  workspaceDirectory,
+  projectDirectory
+) {
+  core.info(
+    `Running tests and instrumentor in ${projectDirectory} and workspace is: ${workspaceDirectory}`
+  );
+  const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
+  await exec.exec(
+    "node",
+    [
+      `${pathToCLI}/lib/index.js`,
+      "instrument",
+      "--srcDir",
+      fullProjectDir,
+      "--input",
+      path.join(fullProjectDir, "syft"),
+      "--testSpecs",
+      path.join(fullProjectDir, "syft", "tests"),
+      "--verbose",
+    ],
+    {
+      cwd: fullProjectDir,
     }
-    // Otherwise return issue number from commit
-    const issueNumber = (
-      await octokit.repos.listPullRequestsAssociatedWithCommit({
-        commit_sha: context.sha,
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-      })
-    ).data[0].number;
-    return issueNumber;
-  } catch (e) {
-    core.warning(
-      `Failed to get issue number from context, error: ${e.message}`
-    );
-    return 0;
-  }
+  );
 }
 
 async function setup() {
   try {
     // Get version of tool to be installed
     const workspaceDirectory = process.env.GITHUB_WORKSPACE;
-    const version = core.getInput("version");
-    const workingDirectory = core.getInput("working_directory");
+    const projectDirectory = core.getInput("working_directory");
     const instrumentationToken = core.getInput("instrumentation_token");
     const githubToken = core.getInput("github_token");
+    const octokit = github.getOctokit(githubToken);
+    const issueNumber = await utils.getIssueNumber(octokit);
 
     core.info(`Syft Instrumentation starting: version: ${version}`);
-
-    await exec.exec("ls", [path.join(workspaceDirectory, workingDirectory)]);
-    await exec.exec("ls", [
-      path.join(workspaceDirectory, workingDirectory, "syft"),
-    ]);
-    await exec.exec("ls", [
-      path.join(workspaceDirectory, workingDirectory, "syft", "tests"),
-    ]);
-
-    const octokit = github.getOctokit(githubToken);
-    const issueNumber = await getIssueNumber(octokit);
 
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
 
-    core.info(
-      `Downloading the binary for version: ${version}, PR is: ${issueNumber}`
-    );
-
-    // Download the specific version of the tool, e.g. as a tarball/zipball
-    core.info("Downloading code assistor brain");
-    const download = getDownloadObject(version);
-    const pathToTarball = await tc.downloadTool(download.url);
-    const pathToUnzip = await tc.extractTar(pathToTarball);
-
-    const SYFT_DIRECTORY = path.join(workspaceDirectory, "../../syft");
-    await io.cp(pathToUnzip, SYFT_DIRECTORY, {
-      recursive: true,
-      force: true,
-    });
-    const pathToCLI = path.join(SYFT_DIRECTORY, "dist-bundle");
-
-    core.info("Installing dependencies");
-    await exec.exec("npm", ["install", "--include-dev"], {
-      cwd: pathToCLI,
-    });
-
-    core.info("Installing puppeteer dependencies");
-    await setupPuppeteer();
-
-    core.info(
-      `Running tests and instrumentor in ${workingDirectory} and workspace is: ${workspaceDirectory}`
-    );
-    const projectDir = path.join(workspaceDirectory, workingDirectory);
-    await exec.exec(
-      "node",
-      [
-        `${pathToCLI}/lib/index.js`,
-        "instrument",
-        "--srcDir",
-        projectDir,
-        "--input",
-        path.join(projectDir, "syft"),
-        "--testSpecs",
-        path.join(projectDir, "syft", "tests"),
-      ],
-      {
-        cwd: path.join(workspaceDirectory, workingDirectory),
-      }
-    );
+    const pathToCLI = await setupSyftCLI(workspaceDirectory);
+    await utils.setupPuppeteer();
+    await runInstrumentCommand(pathToCLI, workspaceDirectory, projectDirectory);
   } catch (e) {
     core.setFailed(e);
   }
