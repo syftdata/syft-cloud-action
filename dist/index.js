@@ -94,16 +94,18 @@ async function setup() {
 
     const pathToCLI = await extract(pathToTarball);
     core.info("Installing dependencies");
-    await exec.exec("npm install --include-dev");
-    // Expose the tool by adding it to the PATH
-    //core.addPath(path.join(pathToCLI, download.binPath));
+    await exec.exec("npm", ["install", "--include-dev"], {
+      cwd: pathToCLI,
+    });
     await setupPuppeteer();
     core.info("Running tests and instrumentor");
-    await exec.exec("node", [
-      `${pathToCLI}/lib/index.js`,
-      "instrument",
-      `--testSpecs ${workingDirectory}/syft/tests`,
-    ]);
+    await exec.exec(
+      "node",
+      [`${pathToCLI}/lib/index.js`, "instrument", `--testSpecs syft/tests`],
+      {
+        cwd: workingDirectory,
+      }
+    );
     //
   } catch (e) {
     core.setFailed(e);
