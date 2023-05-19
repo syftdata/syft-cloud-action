@@ -40,20 +40,27 @@ async function setupPuppeteer() {
 }
 
 async function getIssueNumber(octokit) {
-  const context = github.context;
-  const issue = context.payload.issue;
-  if (issue) {
-    return issue.number;
+  try {
+    const context = github.context;
+    const issue = context.payload.issue;
+    if (issue) {
+      return issue.number;
+    }
+    // Otherwise return issue number from commit
+    const issueNumber = (
+      await octokit.repos.listPullRequestsAssociatedWithCommit({
+        commit_sha: context.sha,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+      })
+    ).data[0].number;
+    return issueNumber;
+  } catch (e) {
+    core.warning(
+      `Failed to get issue number from context, error: ${e.message}`
+    );
+    return 0;
   }
-  // Otherwise return issue number from commit
-  const issueNumber = (
-    await octokit.repos.listPullRequestsAssociatedWithCommit({
-      commit_sha: context.sha,
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-    })
-  ).data[0].number;
-  return issueNumber;
 }
 
 async function setup() {
@@ -66,7 +73,6 @@ async function setup() {
 
     core.info(`Syft Instrumentation starting: version: ${version}`);
 
-    const context = github.context;
     const octokit = github.getOctokit(githubToken);
     const issueNumber = getIssueNumber(octokit);
 
