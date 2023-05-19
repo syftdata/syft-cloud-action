@@ -88,20 +88,22 @@ async function setup() {
     const pathToUnzip = await tc.extractTar(pathToTarball);
 
     const workspaceDirectory = process.env.GITHUB_WORKSPACE;
-    await io.cp(pathToUnzip, workspaceDirectory, {
+
+    const SYFT_DIRECTORY = path.join(workspaceDirectory, "../../syft");
+    await io.cp(pathToUnzip, SYFT_DIRECTORY, {
       recursive: true,
       force: true,
     });
-    const pathToCLI = path.join(workspaceDirectory, "dist-bundle");
+    const pathToCLI = path.join(SYFT_DIRECTORY, "dist-bundle");
     await exec.exec("ls", ["-R", `${pathToCLI}/lib`]);
-
-    core.info("Installing puppeteer dependencies");
-    await setupPuppeteer();
 
     core.info("Installing dependencies");
     await exec.exec("npm", ["install", "--include-dev"], {
       cwd: pathToCLI,
     });
+
+    core.info("Installing puppeteer dependencies");
+    await setupPuppeteer();
 
     core.info(
       `Running tests and instrumentor in ${workingDirectory} and workspace is: ${workspaceDirectory}`
