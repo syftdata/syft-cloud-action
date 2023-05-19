@@ -26,6 +26,7 @@ export async function setupPuppeteer() {
     `sudo apt-get install -y google-chrome-stable --no-install-recommends`
   );
   await exec.exec(`sudo rm -rf /var/lib/apt/lists/*`);
+  core.setE;
 }
 
 export async function getIssueNumber(octokit) {

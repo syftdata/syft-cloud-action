@@ -80,6 +80,11 @@ async function setup() {
     core.info(`Syft Instrumentation starting`);
 
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
+    core.exportVariable(
+      "PUPPETEER_CACHE_DIR",
+      path.join(workspaceDirectory, ".cache", "puppeteer")
+    );
+
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
 
     const pathToCLI = await setupSyftCLI(workspaceDirectory);
@@ -13562,6 +13567,7 @@ async function setupPuppeteer() {
     `sudo apt-get install -y google-chrome-stable --no-install-recommends`
   );
   await exec.exec(`sudo rm -rf /var/lib/apt/lists/*`);
+  core.setE;
 }
 
 async function getIssueNumber(octokit) {
