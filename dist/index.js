@@ -16,7 +16,7 @@ function getDownloadObject(version) {
   const extension = "tgz";
   const binPath = "bin";
   //const url = `https://github.com/cli/cli/releases/download/v${version}/${filename}.${extension}`;
-  const url = "https://storage.googleapis.com/syft_cdn/syftdata-cli.tgz";
+  const url = "https://storage.googleapis.com/syft_cdn/syftdata-cli-v1.tgz";
   return {
     url,
     binPath,
