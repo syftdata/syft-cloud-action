@@ -70,12 +70,21 @@ async function getIssueNumber(octokit) {
 async function setup() {
   try {
     // Get version of tool to be installed
+    const workspaceDirectory = process.env.GITHUB_WORKSPACE;
     const version = core.getInput("version");
     const workingDirectory = core.getInput("working_directory");
     const instrumentationToken = core.getInput("instrumentation_token");
     const githubToken = core.getInput("github_token");
 
     core.info(`Syft Instrumentation starting: version: ${version}`);
+
+    await exec.exec("ls", [path.join(workspaceDirectory, workingDirectory)]);
+    await exec.exec("ls", [
+      path.join(workspaceDirectory, workingDirectory, "syft"),
+    ]);
+    await exec.exec("ls", [
+      path.join(workspaceDirectory, workingDirectory, "syft", "tests"),
+    ]);
 
     const octokit = github.getOctokit(githubToken);
     const issueNumber = await getIssueNumber(octokit);
@@ -93,15 +102,12 @@ async function setup() {
     const pathToTarball = await tc.downloadTool(download.url);
     const pathToUnzip = await tc.extractTar(pathToTarball);
 
-    const workspaceDirectory = process.env.GITHUB_WORKSPACE;
-
     const SYFT_DIRECTORY = path.join(workspaceDirectory, "../../syft");
     await io.cp(pathToUnzip, SYFT_DIRECTORY, {
       recursive: true,
       force: true,
     });
     const pathToCLI = path.join(SYFT_DIRECTORY, "dist-bundle");
-    await exec.exec("ls", ["-R", `${pathToCLI}/lib`]);
 
     core.info("Installing dependencies");
     await exec.exec("npm", ["install", "--include-dev"], {
@@ -116,7 +122,7 @@ async function setup() {
     );
     await exec.exec(
       "node",
-      [`${pathToCLI}/lib/index.js`, "instrument", `--testSpecs syft/tests`],
+      [`${pathToCLI}/lib/index.js`, "instrument", `--testSpecs ./syft/tests`],
       {
         cwd: path.join(workspaceDirectory, workingDirectory),
       }
