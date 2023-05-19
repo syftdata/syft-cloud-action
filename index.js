@@ -69,9 +69,9 @@ async function setup() {
     const instrumentationToken = core.getInput("instrumentation_token");
     const githubToken = core.getInput("github_token");
     const octokit = github.getOctokit(githubToken);
-    const issueNumber = await utils.getIssueNumber(octokit);
+    //const issueNumber = await utils.getIssueNumber(octokit);
 
-    core.info(`Syft Instrumentation starting: version: ${version}`);
+    core.info(`Syft Instrumentation starting`);
 
     core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
