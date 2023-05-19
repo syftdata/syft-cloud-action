@@ -99,9 +99,9 @@ async function setup() {
     const pathToUnzip = await tc.extractTar(pathToTarball);
 
     const SYFT_FOLDER = "/home/runner/work/syft";
-    io.cp(pathToUnzip, SYFT_FOLDER, { recursive: true, force: true });
+    await io.cp(pathToUnzip, SYFT_FOLDER, { recursive: true, force: true });
     const pathToCLI = path.join(SYFT_FOLDER, "dist-bundle");
-    await exec.exec("ls", ["-R", pathToCLI]);
+    await exec.exec("ls", ["-R", `${pathToCLI}/lib`]);
 
     core.info("Installing puppeteer dependencies");
     await setupPuppeteer();
