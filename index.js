@@ -31,15 +31,10 @@ async function setupPuppeteer() {
   await exec.exec(`sudo apt-key add -`, [], {
     input: stdout,
   });
-  // fs.appendFileSync(
-  //   "/etc/apt/sources.list.d/google.list",
-  //   "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main"
-  // );
-  await exec.exec("sudo", [
-    "sh",
-    "-c",
-    "'echo \"deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main\" >> /etc/apt/sources.list.d/google.list'",
-  ]);
+  await exec.exec("sudo tee -a /etc/apt/sources.list.d/google.list", [], {
+    input:
+      "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main",
+  });
   await exec.exec(`sudo apt-get update`);
   await exec.exec(
     `sudo apt-get install -y google-chrome-stable --no-install-recommends`
