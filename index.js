@@ -69,7 +69,7 @@ async function setup() {
     const instrumentationToken = core.getInput("instrumentation_token");
     const githubToken = core.getInput("github_token");
     const octokit = github.getOctokit(githubToken);
-    //const issueNumber = await utils.getIssueNumber(octokit);
+    const issueNumber = await utils.getIssueNumber(octokit);
 
     core.info(`Syft Instrumentation starting`);
 
@@ -84,6 +84,22 @@ async function setup() {
     const pathToCLI = await setupSyftCLI(workspaceDirectory);
     await utils.setupPuppeteer();
     await runInstrumentCommand(pathToCLI, workspaceDirectory, projectDirectory);
+
+    utils.postComent(octokit, issueNumber, "Instrumentation` complete");
+    // `Hi there, I found some changes on syft events.
+    // - I found **3 new syft events**.
+    // - **3 events** are failing with this [Test Spec.](http://google.com)
+
+    // ### Details
+
+    // | Command            | Description                      |
+    // | ------------------ | -------------------------------- |
+    // | Events             | **5** <sub><sup>(+3)</sup></sub> |
+    // | Test Specs         | **1** <sub><sup>(+1)</sup></sub> |
+    // | Failing Test Specs | **1** <sub><sup>(+1)</sup></sub> |
+    // | Failing Events     | **3** <sub><sup>(+3)</sup></sub> |
+
+    // I will attempt to make code changes to meet all Test specs.`;
   } catch (e) {
     core.setFailed(e);
   }

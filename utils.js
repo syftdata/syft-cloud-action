@@ -52,3 +52,21 @@ export async function getIssueNumber(octokit) {
     return 0;
   }
 }
+
+export async function postComent(octokit, issueNumber, comment) {
+  if (issueNumber === 0) {
+    core.warning("No issue number found, skipping posting comment");
+    return;
+  }
+  const context = github.context;
+  try {
+    await octokit.issues.createComment({
+      issue_number: issueNumber,
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      body: comment,
+    });
+  } catch (e) {
+    core.warning(`Failed to post comment, error: ${e.message}`);
+  }
+}
