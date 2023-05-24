@@ -7,7 +7,7 @@ const io = require("@actions/io");
 const utils = require("./utils");
 
 function getDownloadObject(version) {
-  const url = "https://storage.googleapis.com/syft_cdn/syftdata-cli-v1.tgz";
+  const url = `https://storage.googleapis.com/syft_cdn/syftdata-cli-v${version}.tgz`;
   return {
     url,
   };
@@ -67,13 +67,10 @@ async function setup() {
     const workspaceDirectory = process.env.GITHUB_WORKSPACE;
     const projectDirectory = core.getInput("working_directory");
     const instrumentationToken = core.getInput("instrumentation_token");
-    const githubToken = core.getInput("github_token");
-    const octokit = github.getOctokit(githubToken);
-    const issueNumber = await utils.getIssueNumber(octokit);
 
     core.info(`Syft Instrumentation starting`);
 
-    //core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
+    core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable(
       "PUPPETEER_CACHE_DIR",
       path.join(workspaceDirectory, ".cache", "puppeteer")
@@ -85,7 +82,10 @@ async function setup() {
     await utils.setupPuppeteer();
     await runInstrumentCommand(pathToCLI, workspaceDirectory, projectDirectory);
 
-    utils.postComent(octokit, issueNumber, "Instrumentation` complete");
+    // const githubToken = core.getInput("github_token");
+    // const octokit = github.getOctokit(githubToken);
+    // const issueNumber = await utils.getIssueNumber(octokit);
+    // utils.postComent(octokit, issueNumber, "Instrumentation` complete");
     // `Hi there, I found some changes on syft events.
     // - I found **3 new syft events**.
     // - **3 events** are failing with this [Test Spec.](http://google.com)
