@@ -10,7 +10,7 @@ inputs:
   version:
     description: Version of Syft Studio CLI to install
     required: false
-    default: 1.0.0
+    default: 1.0.1
   working_directory:
     description: "Working Directory"
     required: false
