@@ -59,6 +59,7 @@ async function runTests(
     ],
     {
       cwd: pathToCLI,
+      ignoreReturnCode: true,
     }
   );
 
@@ -146,7 +147,7 @@ async function setup() {
       projectDirectory
     );
     if (!result) {
-      core.info(`Detected Test Failures. Syft Instrumentation starting..`);
+      core.info(`Syft tests are failing. Attempting to auto instrumentation..`);
       result = await runInstrumentCommand(
         octokit,
         pathToCLI,
@@ -154,9 +155,7 @@ async function setup() {
         projectDirectory
       );
       if (!result) {
-        core.info(
-          `Detected Test Failures event after instrumentation. Giving up.`
-        );
+        core.info(`Syft tests are failing after instrumentation. Giving up.`);
       }
     }
   } catch (e) {
