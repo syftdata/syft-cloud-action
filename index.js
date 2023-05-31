@@ -33,13 +33,58 @@ async function setupSyftCLI(workspaceDirectory) {
   return pathToCLI;
 }
 
-async function runInstrumentCommand(
+async function runTests(
+  octokit,
   pathToCLI,
   workspaceDirectory,
   projectDirectory
 ) {
   core.info(
-    `Running tests and instrumentor in ${projectDirectory} and workspace is: ${workspaceDirectory}`
+    `Running tests in ${projectDirectory} and workspace is: ${workspaceDirectory}`
+  );
+  const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
+  const { exitCode, stdout } = await exec.getExecOutput(
+    "node",
+    [
+      `${pathToCLI}/lib/index.js`,
+      "test",
+      "--testSpecs",
+      path.join(fullProjectDir, "syft", "tests"),
+    ],
+    {
+      cwd: pathToCLI,
+    }
+  );
+
+  // const issueNumber = await utils.getIssueNumber(octokit);
+  // if (issueNumber != 0) {
+  //   utils.postComent(octokit, issueNumber, "Instrumentation` complete");
+  //   `Hi there, I found some changes on syft events.
+  //     - I found **3 new syft events**.
+  //     - **3 events** are failing with this [Test Spec.](http://google.com)
+
+  //     ### Details
+
+  //     | Command            | Description                      |
+  //     | ------------------ | -------------------------------- |
+  //     | Events             | **5** <sub><sup>(+3)</sup></sub> |
+  //     | Test Specs         | **1** <sub><sup>(+1)</sup></sub> |
+  //     | Failing Test Specs | **1** <sub><sup>(+1)</sup></sub> |
+  //     | Failing Events     | **3** <sub><sup>(+3)</sup></sub> |
+
+  //     I will attempt to make code changes to meet all Test specs.`;
+  // }
+  return exitCode === 0;
+}
+
+async function runInstrumentCommand(
+  octokit,
+  pathToCLI,
+  workspaceDirectory,
+  projectDirectory
+) {
+  core.info(
+    `Running instrumentation in ${projectDirectory} and workspace is: ${workspaceDirectory}`
   );
   const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
   await exec.exec(
@@ -59,6 +104,12 @@ async function runInstrumentCommand(
       cwd: pathToCLI,
     }
   );
+  return await runTests(
+    octokit,
+    pathToCLI,
+    workspaceDirectory,
+    projectDirectory
+  );
 }
 
 async function setup() {
@@ -68,7 +119,8 @@ async function setup() {
     const projectDirectory = core.getInput("working_directory");
     const instrumentationToken = core.getInput("instrumentation_token");
 
-    core.info(`Syft Instrumentation starting`);
+    const githubToken = core.getInput("github_token");
+    const octokit = github.getOctokit(githubToken);
 
     //core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
     core.exportVariable(
@@ -80,26 +132,27 @@ async function setup() {
 
     const pathToCLI = await setupSyftCLI(workspaceDirectory);
     await utils.setupPuppeteer();
-    await runInstrumentCommand(pathToCLI, workspaceDirectory, projectDirectory);
 
-    // const githubToken = core.getInput("github_token");
-    // const octokit = github.getOctokit(githubToken);
-    // const issueNumber = await utils.getIssueNumber(octokit);
-    // utils.postComent(octokit, issueNumber, "Instrumentation` complete");
-    // `Hi there, I found some changes on syft events.
-    // - I found **3 new syft events**.
-    // - **3 events** are failing with this [Test Spec.](http://google.com)
-
-    // ### Details
-
-    // | Command            | Description                      |
-    // | ------------------ | -------------------------------- |
-    // | Events             | **5** <sub><sup>(+3)</sup></sub> |
-    // | Test Specs         | **1** <sub><sup>(+1)</sup></sub> |
-    // | Failing Test Specs | **1** <sub><sup>(+1)</sup></sub> |
-    // | Failing Events     | **3** <sub><sup>(+3)</sup></sub> |
-
-    // I will attempt to make code changes to meet all Test specs.`;
+    let result = await runTests(
+      octokit,
+      pathToCLI,
+      workspaceDirectory,
+      projectDirectory
+    );
+    if (!result) {
+      core.info(`Detected Test Failures. Syft Instrumentation starting..`);
+      result = await runInstrumentCommand(
+        octokit,
+        pathToCLI,
+        workspaceDirectory,
+        projectDirectory
+      );
+      if (!result) {
+        core.info(
+          `Detected Test Failures event after instrumentation. Giving up.`
+        );
+      }
+    }
   } catch (e) {
     core.setFailed(e);
   }
