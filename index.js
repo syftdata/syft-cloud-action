@@ -33,12 +33,7 @@ async function setupSyftCLI(workspaceDirectory) {
   return pathToCLI;
 }
 
-async function runTests(
-  octokit,
-  pathToCLI,
-  workspaceDirectory,
-  projectDirectory
-) {
+async function runTests(pathToCLI, workspaceDirectory, projectDirectory) {
   core.info(
     `Running tests in ${projectDirectory} and workspace is: ${workspaceDirectory}`
   );
@@ -50,32 +45,14 @@ async function runTests(
       "test",
       "--testSpecs",
       path.join(fullProjectDir, "syft", "tests"),
+      "--verbose",
     ],
     {
       cwd: pathToCLI,
       ignoreReturnCode: true,
     }
   );
-
-  // const issueNumber = await utils.getIssueNumber(octokit);
-  // if (issueNumber != 0) {
-  //   utils.postComent(octokit, issueNumber, "Instrumentation` complete");
-  //   `Hi there, I found some changes on syft events.
-  //     - I found **3 new syft events**.
-  //     - **3 events** are failing with this [Test Spec.](http://google.com)
-
-  //     ### Details
-
-  //     | Command            | Description                      |
-  //     | ------------------ | -------------------------------- |
-  //     | Events             | **5** <sub><sup>(+3)</sup></sub> |
-  //     | Test Specs         | **1** <sub><sup>(+1)</sup></sub> |
-  //     | Failing Test Specs | **1** <sub><sup>(+1)</sup></sub> |
-  //     | Failing Events     | **3** <sub><sup>(+3)</sup></sub> |
-
-  //     I will attempt to make code changes to meet all Test specs.`;
-  // }
-  return exitCode === 0;
+  return exitCode;
 }
 
 async function runInstrumentCommand(
@@ -88,7 +65,7 @@ async function runInstrumentCommand(
     `Running instrumentation in ${projectDirectory} and workspace is: ${workspaceDirectory}`
   );
   const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
-  await exec.exec(
+  const { exitCode } = await exec.getExecOutput(
     "node",
     [
       `${pathToCLI}/lib/index.js`,
@@ -105,12 +82,11 @@ async function runInstrumentCommand(
       cwd: pathToCLI,
     }
   );
-  return await runTests(
-    octokit,
-    pathToCLI,
-    workspaceDirectory,
-    projectDirectory
-  );
+  if (exitCode === 0) {
+    return await runTests(pathToCLI, workspaceDirectory, projectDirectory);
+  } else {
+    return exitCode;
+  }
 }
 
 async function setup() {
@@ -134,22 +110,40 @@ async function setup() {
     const pathToCLI = await setupSyftCLI(workspaceDirectory);
     await utils.setupPuppeteer();
 
-    let result = await runTests(
-      octokit,
+    let exitCode = await runTests(
       pathToCLI,
       workspaceDirectory,
       projectDirectory
     );
-    if (!result) {
+    if (exitCode !== 0) {
       core.info(`Syft tests are failing. Attempting to auto instrumentation..`);
-      result = await runInstrumentCommand(
+      const issueNumber = await utils.getIssueNumber(octokit);
+      utils.postComent(
+        octokit,
+        issueNumber,
+        `Hi there, Syft tests are failing. Attempting to auto instrument!
+        - **3 events** are failing with this [Test Spec.](http://google.com)
+    
+        ### Details
+    
+        | Command            | Description                      |
+        | ------------------ | -------------------------------- |
+        | Events             | **5**                            |
+        | Test Specs         | **1** <sub><sup>(+1)</sup></sub> |
+        | Failing Test Specs | **1** <sub><sup>(+1)</sup></sub> |
+        | Failing Events     | **3** <sub><sup>(+3)</sup></sub> |
+    
+        I will attempt to make code changes to meet all Test specs.`
+      );
+      exitCode = await runInstrumentCommand(
         octokit,
         pathToCLI,
         workspaceDirectory,
         projectDirectory
       );
-      if (!result) {
-        core.info(`Syft tests are failing after instrumentation. Giving up.`);
+      if (exitCode !== 0) {
+        core.info(`Failed auto instrument`);
+        core.setFailed("Syft tests are failing");
       }
     }
   } catch (e) {
