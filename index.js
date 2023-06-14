@@ -42,10 +42,9 @@ async function runTests(pathToCLI, workspaceDirectory, projectDirectory) {
     "node",
     [
       `${pathToCLI}/lib/index.js`,
-      "test",
-      "--testSpecs",
-      path.join(fullProjectDir, "syft", "tests"),
-      "--verbose",
+      "test1",
+      "--eventTags",
+      path.join(fullProjectDir, "syft", "event_tags.json"),
     ],
     {
       cwd: pathToCLI,
@@ -69,13 +68,13 @@ async function runInstrumentCommand(
     "node",
     [
       `${pathToCLI}/lib/index.js`,
-      "instrument",
+      "instrument1",
       "--srcDir",
       fullProjectDir,
       "--input",
       path.join(fullProjectDir, "syft"),
-      "--testSpecs",
-      path.join(fullProjectDir, "syft", "tests"),
+      "--eventTags",
+      path.join(fullProjectDir, "syft", "event_tags.json"),
       "--verbose",
     ],
     {
@@ -99,16 +98,9 @@ async function setup() {
     const githubToken = core.getInput("github_token");
     const octokit = github.getOctokit(githubToken);
 
-    //core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
-    core.exportVariable(
-      "PUPPETEER_CACHE_DIR",
-      path.join(workspaceDirectory, ".cache", "puppeteer")
-    );
-
     core.exportVariable("OPENAI_API_KEY", instrumentationToken);
 
     const pathToCLI = await setupSyftCLI(workspaceDirectory);
-    await utils.setupPuppeteer();
 
     let exitCode = await runTests(
       pathToCLI,
@@ -116,24 +108,14 @@ async function setup() {
       projectDirectory
     );
     if (exitCode !== 0) {
-      core.info(`Syft tests are failing. Attempting to auto instrumentation..`);
+      core.info(
+        `Syft found events that require instrumentation. Attempting to auto instrumentation..`
+      );
       const issueNumber = await utils.getIssueNumber(octokit);
       utils.postComent(
         octokit,
         issueNumber,
-        `Hi there, Syft tests are failing. Attempting to auto instrument!
-        - **3 events** are failing with this [Test Spec.](http://google.com)
-    
-        ### Details
-    
-        | Command            | Description                      |
-        | ------------------ | -------------------------------- |
-        | Events             | **5**                            |
-        | Test Specs         | **1** <sub><sup>(+1)</sup></sub> |
-        | Failing Test Specs | **1** <sub><sup>(+1)</sup></sub> |
-        | Failing Events     | **3** <sub><sup>(+3)</sup></sub> |
-    
-        I will attempt to make code changes to meet all Test specs.`
+        `Hi there, Syft found changes to events. Attempting to auto instrument!`
       );
       exitCode = await runInstrumentCommand(
         octokit,
@@ -142,8 +124,7 @@ async function setup() {
         projectDirectory
       );
       if (exitCode !== 0) {
-        core.info(`Failed auto instrument`);
-        core.setFailed("Syft tests are failing");
+        core.info(`Failed to auto instrument`);
       }
     }
   } catch (e) {
