@@ -1,9 +1,7 @@
 const path = require("path");
 const core = require("@actions/core");
-const tc = require("@actions/tool-cache");
 const exec = require("@actions/exec");
 const github = require("@actions/github");
-const io = require("@actions/io");
 const utils = require("./utils");
 
 async function runAnalysis(
@@ -30,14 +28,14 @@ async function runAnalysis(
 async function setup() {
   try {
     // Get version of tool to be installed
-    const workspaceDirectory = process.env.GITHUB_WORKSPACE;
+    const baseDir = path.join(process.cwd(), core.getInput("cwd") || "");
     const projectDirectory = core.getInput("project_directory");
     const outputDirectory = core.getInput("output_directory");
 
     core.info(`Syft Analysis starting..`);
 
     await utils.setupSyftCli();
-    await runAnalysis(workspaceDirectory, projectDirectory, outputDirectory);
+    await runAnalysis(baseDir, projectDirectory, outputDirectory);
 
     // const githubToken = core.getInput("github_token");
     // const octokit = github.getOctokit(githubToken);
