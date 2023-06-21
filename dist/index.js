@@ -12,53 +12,25 @@ const github = __nccwpck_require__(7427);
 const io = __nccwpck_require__(8549);
 const utils = __nccwpck_require__(6753);
 
-function getDownloadObject(version) {
-  const url = `https://storage.googleapis.com/syft_cdn/syftdata-cli-v${version}.tgz`;
-  return {
-    url,
-  };
-}
-
-async function setupSyftCLI(workspaceDirectory) {
-  const version = core.getInput("version");
-  core.info(`Downloading the binary for version: ${version}`);
-  const download = getDownloadObject(version);
-  const pathToTarball = await tc.downloadTool(download.url);
-  const pathToUnzip = await tc.extractTar(pathToTarball);
-
-  const syftDir = path.join(workspaceDirectory, "../../syft");
-  await io.cp(pathToUnzip, syftDir, {
-    recursive: true,
-    force: true,
-  });
-  const pathToCLI = path.join(syftDir, "dist-bundle");
-  core.info("Installing dependencies");
-  await exec.exec("npm", ["install", "--include-dev"], {
-    cwd: pathToCLI,
-  });
-  return pathToCLI;
-}
-
-async function runInstrumentCommand(
-  pathToCLI,
+async function runAnalysis(
   workspaceDirectory,
-  projectDirectory
+  projectDirectory,
+  outputDirectory
 ) {
   core.info(
     `Running tests and instrumentor in ${projectDirectory} and workspace is: ${workspaceDirectory}`
   );
   const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
+  const outputDir = path.join(workspaceDirectory, outputDirectory);
   await exec.exec(
-    "node",
+    "npx",
     [
-      `${pathToCLI}/lib/index.js`,
-      "instrument",
+      `syft`,
+      "analyze",
       "--srcDir",
       fullProjectDir,
-      "--input",
-      path.join(fullProjectDir, "syft"),
-      "--testSpecs",
-      path.join(fullProjectDir, "syft", "tests"),
+      "--output",
+      outputDir,
       "--verbose",
     ],
     {
@@ -71,22 +43,13 @@ async function setup() {
   try {
     // Get version of tool to be installed
     const workspaceDirectory = process.env.GITHUB_WORKSPACE;
-    const projectDirectory = core.getInput("working_directory");
-    const instrumentationToken = core.getInput("instrumentation_token");
+    const projectDirectory = core.getInput("project_directory");
+    const outputDirectory = core.getInput("output_directory");
 
-    core.info(`Syft Instrumentation starting`);
+    core.info(`Syft Analysis starting..`);
 
-    //core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
-    core.exportVariable(
-      "PUPPETEER_CACHE_DIR",
-      path.join(workspaceDirectory, ".cache", "puppeteer")
-    );
-
-    core.exportVariable("OPENAI_API_KEY", instrumentationToken);
-
-    const pathToCLI = await setupSyftCLI(workspaceDirectory);
-    await utils.setupPuppeteer();
-    await runInstrumentCommand(pathToCLI, workspaceDirectory, projectDirectory);
+    await utils.setupSyftCli();
+    await runAnalysis(workspaceDirectory, projectDirectory, outputDirectory);
 
     // const githubToken = core.getInput("github_token");
     // const octokit = github.getOctokit(githubToken);
@@ -13554,37 +13517,15 @@ __nccwpck_require__.r(__webpack_exports__);
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   "getIssueNumber": () => (/* binding */ getIssueNumber),
 /* harmony export */   "postComent": () => (/* binding */ postComent),
-/* harmony export */   "setupPuppeteer": () => (/* binding */ setupPuppeteer)
+/* harmony export */   "setupSyftCli": () => (/* binding */ setupSyftCli)
 /* harmony export */ });
 const core = __nccwpck_require__(3476);
 const exec = __nccwpck_require__(5493);
 const github = __nccwpck_require__(7427);
 
-async function setupPuppeteer() {
-  core.info("Installing puppeteer dependencies");
-  await exec.exec(`sudo apt-get update`);
-  await exec.exec(`sudo apt-get install -yq libgconf-2-4`);
-  await exec.exec(`sudo apt-get install -y wget xvfb --no-install-recommends`);
-  const { stdout } = await exec.getExecOutput(
-    `wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub`,
-    [],
-    {
-      silent: true,
-    }
-  );
-  await exec.exec(`sudo apt-key add -`, [], {
-    input: stdout,
-  });
-  await exec.exec("sudo tee -a /etc/apt/sources.list.d/google.list", [], {
-    input:
-      "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main",
-  });
-  await exec.exec(`sudo apt-get update`);
-  await exec.exec(
-    `sudo apt-get install -y google-chrome-stable --no-install-recommends`
-  );
-  await exec.exec(`sudo rm -rf /var/lib/apt/lists/*`);
-  core.setE;
+async function setupSyftCli() {
+  core.info("Installing Syft");
+  await exec.exec(`npm -g install @syftdata/cli`);
 }
 
 async function getIssueNumber(octokit) {

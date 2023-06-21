@@ -1,9 +1,6 @@
-name: syft-instrumentation
-description: Runs Syft Auto instrumentation tooling on your codebase.
+name: syft-analyzer
+description: Syft Analyzer helps you monitor your analytics events during build time.
 inputs:
-  instrumentation_token:
-    description: "Syft Auto Instrumentation token"
-    required: true
   github_token:
     description: "Github token to change source code"
     required: true
@@ -11,8 +8,12 @@ inputs:
     description: Version of Syft Studio CLI to install
     required: false
     default: 1.0.1
-  working_directory:
-    description: "Working Directory"
+  project_directory:
+    description: "Project Directory"
+    required: false
+    default: "."
+  output_directory:
+    description: "Output Directory to keep schema files"
     required: false
     default: "."
 runs:

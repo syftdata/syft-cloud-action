@@ -6,53 +6,25 @@ const github = require("@actions/github");
 const io = require("@actions/io");
 const utils = require("./utils");
 
-function getDownloadObject(version) {
-  const url = `https://storage.googleapis.com/syft_cdn/syftdata-cli-v${version}.tgz`;
-  return {
-    url,
-  };
-}
-
-async function setupSyftCLI(workspaceDirectory) {
-  const version = core.getInput("version");
-  core.info(`Downloading the binary for version: ${version}`);
-  const download = getDownloadObject(version);
-  const pathToTarball = await tc.downloadTool(download.url);
-  const pathToUnzip = await tc.extractTar(pathToTarball);
-
-  const syftDir = path.join(workspaceDirectory, "../../syft");
-  await io.cp(pathToUnzip, syftDir, {
-    recursive: true,
-    force: true,
-  });
-  const pathToCLI = path.join(syftDir, "dist-bundle");
-  core.info("Installing dependencies");
-  await exec.exec("npm", ["install", "--include-dev"], {
-    cwd: pathToCLI,
-  });
-  return pathToCLI;
-}
-
-async function runInstrumentCommand(
-  pathToCLI,
+async function runAnalysis(
   workspaceDirectory,
-  projectDirectory
+  projectDirectory,
+  outputDirectory
 ) {
   core.info(
     `Running tests and instrumentor in ${projectDirectory} and workspace is: ${workspaceDirectory}`
   );
   const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
+  const outputDir = path.join(workspaceDirectory, outputDirectory);
   await exec.exec(
-    "node",
+    "npx",
     [
-      `${pathToCLI}/lib/index.js`,
-      "instrument",
+      `syft`,
+      "analyze",
       "--srcDir",
       fullProjectDir,
-      "--input",
-      path.join(fullProjectDir, "syft"),
-      "--testSpecs",
-      path.join(fullProjectDir, "syft", "tests"),
+      "--output",
+      outputDir,
       "--verbose",
     ],
     {
@@ -65,22 +37,13 @@ async function setup() {
   try {
     // Get version of tool to be installed
     const workspaceDirectory = process.env.GITHUB_WORKSPACE;
-    const projectDirectory = core.getInput("working_directory");
-    const instrumentationToken = core.getInput("instrumentation_token");
+    const projectDirectory = core.getInput("project_directory");
+    const outputDirectory = core.getInput("output_directory");
 
-    core.info(`Syft Instrumentation starting`);
+    core.info(`Syft Analysis starting..`);
 
-    //core.exportVariable("PUPPETEER_SKIP_CHROMIUM_DOWNLOAD", "true");
-    core.exportVariable(
-      "PUPPETEER_CACHE_DIR",
-      path.join(workspaceDirectory, ".cache", "puppeteer")
-    );
-
-    core.exportVariable("OPENAI_API_KEY", instrumentationToken);
-
-    const pathToCLI = await setupSyftCLI(workspaceDirectory);
-    await utils.setupPuppeteer();
-    await runInstrumentCommand(pathToCLI, workspaceDirectory, projectDirectory);
+    await utils.setupSyftCli();
+    await runAnalysis(workspaceDirectory, projectDirectory, outputDirectory);
 
     // const githubToken = core.getInput("github_token");
     // const octokit = github.getOctokit(githubToken);
