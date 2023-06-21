@@ -1,13 +1,6 @@
 name: syft-analyzer
 description: Syft Analyzer helps you monitor your analytics events during build time.
 inputs:
-  github_token:
-    description: "Github token to change source code"
-    required: true
-  version:
-    description: Version of Syft Studio CLI to install
-    required: false
-    default: 1.0.1
   project_directory:
     description: "Project Directory"
     required: false
@@ -17,5 +10,5 @@ inputs:
     required: false
     default: "."
 runs:
-  using: node16
+  using: node18
   main: dist/index.js
