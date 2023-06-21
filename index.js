@@ -16,21 +16,15 @@ async function runAnalysis(
   );
   const fullProjectDir = path.join(workspaceDirectory, projectDirectory);
   const outputDir = path.join(workspaceDirectory, outputDirectory);
-  await exec.exec(
-    "npx",
-    [
-      `syft`,
-      "analyze",
-      "--srcDir",
-      fullProjectDir,
-      "--output",
-      outputDir,
-      "--verbose",
-    ],
-    {
-      cwd: pathToCLI,
-    }
-  );
+  await exec.exec("npx", [
+    `syft`,
+    "analyze",
+    "--srcDir",
+    fullProjectDir,
+    "--output",
+    outputDir,
+    "--verbose",
+  ]);
 }
 
 async function setup() {
