@@ -33,7 +33,7 @@ async function setupSyftCLI(workspaceDirectory) {
   });
   const pathToCLI = path.join(syftDir, "dist-bundle");
   core.info("Installing dependencies");
-  await exec.exec("npm", ["install", "--include-dev"], {
+  await exec.exec("npm", ["install", "--include-dev", "--force"], {
     cwd: pathToCLI,
   });
   return pathToCLI;
